@@ -1,0 +1,66 @@
+name: hermes-assistants
+
+services:
+  life:
+    image: nousresearch/hermes-agent@sha256:d6746a084e9341baada483e3d6210444d3c1aeb7c130f0915150065fb2851459
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_GATEWAY_BOOTSTRAP_STATE: running
+      TELEGRAM_ALLOW_ALL_USERS: "false"
+    env_file:
+      - .runtime/host.env
+      - .runtime/life/telegram.env
+    volumes:
+      - life-state:/opt/data
+      - ./.runtime/secrets/life-api-key:/run/secrets/life-api-key:ro
+    command: ["sleep", "infinity"]
+    networks: [life-net]
+    restart: unless-stopped
+  google-connectors:
+    build:
+      context: .
+      dockerfile: google/Dockerfile
+    image: hermes-google-connectors:local
+    env_file:
+      - .runtime/host.env
+      - .runtime/life/telegram.env
+    volumes:
+      - ./.runtime/google:/data
+      - ./.runtime/secrets/life-api-key:/run/secrets/life-api-key:ro
+    networks: [life-net]
+    restart: unless-stopped
+  google-auth:
+    profiles: [admin]
+    image: hermes-google-connectors:local
+    entrypoint: ["node", "admin.ts"]
+    env_file:
+      - .runtime/host.env
+    volumes:
+      - ./.runtime/google:/data
+    ports:
+      - "127.0.0.1:8765:8765"
+    networks: [life-net]
+    restart: "no"
+  coding:
+    build:
+      context: .
+      dockerfile: Dockerfile.coding
+    image: hermes-assistants-coding:local
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_GATEWAY_BOOTSTRAP_STATE: running
+      TELEGRAM_ALLOW_ALL_USERS: "false"
+    env_file:
+      - .runtime/host.env
+      - .runtime/coding/telegram.env
+    volumes:
+      - coding-state:/opt/data
+    command: ["sleep", "infinity"]
+    networks: [coding-net]
+    restart: unless-stopped
+networks:
+  life-net: {}
+  coding-net: {}
+volumes:
+  life-state: {}
+  coding-state: {}

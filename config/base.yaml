@@ -1,0 +1,31 @@
+model:
+  provider: openai-codex
+  default: ""
+fallback_providers: []
+auth:
+  adopt_external_logins: false
+  codex_login_flow: device_code
+delegation:
+  provider: openai-codex
+  fallback_providers: []
+auxiliary:
+  compression:
+    provider: main
+    fallback_chain: []
+  title_generation:
+    provider: main
+    fallback_chain: []
+  session_search:
+    provider: main
+    fallback_chain: []
+  vision:
+    provider: main
+    fallback_chain: []
+  background_review:
+    provider: main
+    fallback_chain: []
+cron:
+  model_provider: openai-codex
+  mirror_delivery: true
+database:
+  journal_mode: delete

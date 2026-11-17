@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+umask 077
+if docker compose version >/dev/null 2>&1; then
+  dc=(docker compose --env-file /dev/null -f compose.yaml)
+elif command -v docker-compose >/dev/null 2>&1; then
+  dc=(docker-compose --env-file /dev/null -f compose.yaml)
+else
+  echo 'Docker Compose is required.' >&2; exit 1
+fi
+role_check() { case "${1-}" in life|coding) ;; *) echo 'Role must be life or coding.' >&2; exit 1;; esac; }
+init() {
+  mkdir -p .runtime/{life,coding,google,secrets}
+  chmod 700 .runtime .runtime/{life,coding,google,secrets}
+  if [[ ! -e .runtime/host.env ]]; then
+    uid=$(id -u); gid=$(id -g)
+    [[ $uid -ge 1 && $uid -le 65534 && $gid -ge 1 && $gid -le 65534 ]] || { echo 'Host UID/GID must be non-root and at most 65534.' >&2; exit 1; }
+    printf 'HERMES_UID=%s\nHERMES_GID=%s\n' "$uid" "$gid" > .runtime/host.env
+  fi
+  if [[ ! -e .runtime/secrets/life-api-key ]]; then openssl rand -hex 32 > .runtime/secrets/life-api-key; fi
+  for role in life coding; do
+    [[ -e .runtime/$role/config.yaml ]] || cp config/base.yaml .runtime/$role/config.yaml
+    [[ -e .runtime/$role/SOUL.md ]] || cp "config/$role/AGENTS.md" .runtime/$role/SOUL.md
+    [[ -e .runtime/$role/telegram.env ]] || : > ".runtime/$role/telegram.env"
+    mkdir -p ".runtime/$role/skills" ".runtime/$role/home"
+    if [[ $role == life ]]; then skill=google; else skill=workflow; fi
+    if [[ ! -e .runtime/$role/skills/$skill ]]; then cp -R "skills/$role/$skill" ".runtime/$role/skills/$skill"; fi
+  done
+  echo 'Initialized private state; existing files were preserved.'
+}
+validate_role() {
+  role_check "$1"
+  file=".runtime/$1/config.yaml"
+  [[ -f $file ]] || { echo 'Run init first.' >&2; return 1; }
+  node scripts/config.mjs validate "$1" || return 1
+
+}
+sync_role() {
+  role_check "$1"
+  [[ -z $("${dc[@]}" ps --status running -q "$1") ]] || { echo "$1 is running; stop it before syncing managed files." >&2; return 1; }
+  node scripts/config.mjs policy "$1"
+  if [[ $1 == life ]]; then skill=google; else skill=workflow; fi
+  tar -C ".runtime/$1" -cf - config.yaml SOUL.md "skills/$skill" |
+    "${dc[@]}" run -T --rm --no-deps --user 0 --entrypoint sh "$1" -c 'set -eu; tar -xf - -C /opt/data; chown "$1:$2" /opt/data/config.yaml /opt/data/SOUL.md; chown -R "$1:$2" "/opt/data/skills/$3"; mkdir -p /opt/data/home; chown "$1:$2" /opt/data /opt/data/home; chmod 600 /opt/data/config.yaml' sh "$(id -u)" "$(id -g)" "$skill"
+  "${dc[@]}" run -T --rm --no-deps --user "$(id -u):$(id -g)" --entrypoint node "$1" --input-type=module < scripts/check-native-env.mjs
+}
+setup_command() {
+  role=$1; home=$2; shift 2
+  if [[ -n $("${dc[@]}" ps --status running -q "$role") ]]; then
+    scripts/role-readiness.sh "$role" 45 1
+    "${dc[@]}" exec --user hermes -e HOME="$home" "$role" "$@"
+  else
+    sync_role "$role"
+    "${dc[@]}" run --rm --no-deps --user "$(id -u):$(id -g)" -e HOME="$home" --entrypoint "$1" "$role" "${@:2}"
+  fi
+}
+
+case "${1-}" in
+  init) init ;;
+  sync) role_check "${2-}"; sync_role "$2" ;;
+  migrate-bind-state) exec scripts/migrate-bind-state.sh ;;
+  model)
+    role_check "${2-}"; model=${3-}
+    [[ $model =~ ^[A-Za-z0-9][A-Za-z0-9._:/-]*$ ]] || { echo 'Supply the exact authorized model identifier.' >&2; exit 1; }
+    [[ -f .runtime/$2/config.yaml ]] || { echo 'Run init first.' >&2; exit 1; }
+    node scripts/config.mjs model "$2" "$model"
+    ;;
+  telegram)
+    role_check "${2-}"; [[ -f .runtime/$2/telegram.env ]] || { echo 'Run init first.' >&2; exit 1; }
+    read -r -s -p 'Bot token: ' token; echo
+    read -r -p 'Allowed Telegram user IDs (comma separated): ' users
+    read -r -p 'Home channel/chat ID: ' channel
+    printf '%s\n%s\n%s\n' "$token" "$users" "$channel" | node scripts/telegram-input.mjs || { echo 'Invalid private Telegram input; nothing changed.' >&2; exit 1; }
+    tmp=$(mktemp ".runtime/$2/.telegram.XXXXXX")
+    printf 'TELEGRAM_BOT_TOKEN=%s\nTELEGRAM_ALLOWED_USERS=%s\nTELEGRAM_HOME_CHANNEL=%s\n' "$token" "$users" "$channel" > "$tmp"
+    mv "$tmp" ".runtime/$2/telegram.env"; unset token
+    echo 'Telegram configuration saved privately. Restart the service to apply it.' ;;
+  telegram-ids)
+    role_check "${2-}"
+    running=$("${dc[@]}" ps --status running -q "$2")
+    [[ -z $running ]] || { echo 'Stop this service before looking up Telegram IDs; competing polling loses updates.' >&2; exit 1; }
+    read -r -s -p 'Bot token: ' token; echo
+    [[ $token =~ ^[A-Za-z0-9_:-]+$ ]] || { echo 'Invalid token format.' >&2; exit 1; }
+    printf '%s' "$token" | node scripts/telegram-ids.mjs
+    unset token ;;
+  login) role_check "${2-}"; setup_command "$2" /opt/data /opt/hermes/bin/hermes auth add openai-codex --no-browser ;;
+  chat)
+    role_check "${2-}"; role=$2; shift 2
+    setup_command "$role" /opt/data hermes chat "$@" ;;
+  github-login) setup_command coding /opt/data/home gh auth login ;;
+  git-identity)
+    name=${2-}; email=${3-}
+    [[ -n $name && $email == *@* && ! $name =~ [Bb][Oo][Tt] && ! $email =~ [Bb][Oo][Tt] ]] || { echo 'Provide your personal Git name and email, not a bot identity.' >&2; exit 1; }
+    setup_command coding /opt/data/home git config --global user.name "$name"
+    setup_command coding /opt/data/home git config --global user.email "$email"
+    setup_command coding /opt/data/home git config --global user.useConfigOnly true ;;
+  validate) validate_role life; validate_role coding; node scripts/telegram-distinct.mjs; echo 'Activation inputs present.' ;;
+  up) validate_role life; validate_role coding; node scripts/telegram-distinct.mjs; sync_role life; sync_role coding; "${dc[@]}" up -d --build; scripts/role-readiness.sh life 45 1; scripts/role-readiness.sh coding 45 1 ;;
+  down) "${dc[@]}" down ;;
+  status)
+    "${dc[@]}" ps
+    for role in life coding; do
+      if scripts/role-readiness.sh "$role" 0 1 2>/dev/null; then echo "$role gateway: ready"; else echo "$role gateway: not ready"; fi
+    done
+    echo 'Gateway readiness does not check account, Telegram, or Google authorization.' ;;
+  shell) role_check "${2-}"; scripts/role-readiness.sh "$2" 45 1; home=/opt/data; [[ $2 != coding ]] || home=/opt/data/home; "${dc[@]}" exec --user hermes -e HOME="$home" "$2" /bin/bash ;;
+  cron-install)
+    validate_role life
+    scripts/role-readiness.sh life 45 1
+    model=$(node scripts/config.mjs get-model life)
+    lock=.runtime/life/.cron-install.lock
+    lock_wait=0
+    missing_pid_wait=0
+    until mkdir "$lock" 2>/dev/null; do
+      if [[ ! -d $lock ]]; then
+        echo 'Cannot create cron installation lock; check staging directory permissions and filesystem.' >&2
+        exit 1
+      fi
+      if [[ -f $lock/pid && -r $lock/pid ]]; then
+        owner=$(cat "$lock/pid" 2>/dev/null) || owner=''
+        if [[ $owner =~ ^[0-9]+$ ]] && ! kill -0 "$owner" 2>/dev/null; then
+          echo 'A stale cron installation lock exists; confirm no installer runs and remove .runtime/life/.cron-install.lock.' >&2
+          exit 1
+        fi
+        if [[ $owner =~ ^[0-9]+$ ]]; then missing_pid_wait=0; else missing_pid_wait=$((missing_pid_wait + 1)); fi
+      else
+        missing_pid_wait=$((missing_pid_wait + 1))
+      fi
+      if (( missing_pid_wait >= 3 )); then
+        echo 'Cron lock has no readable valid PID; confirm no installer runs before removing .runtime/life/.cron-install.lock.' >&2
+        exit 1
+      fi
+      if (( lock_wait >= 30 )); then
+        echo 'Timed out waiting for the cron installation lock; check the running installer and staging filesystem.' >&2
+        exit 1
+      fi
+      sleep 1
+      lock_wait=$((lock_wait + 1))
+    done
+    trap 'rm -f "$lock/pid"; rmdir "$lock" 2>/dev/null || true' EXIT
+    trap 'exit 129' HUP
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    printf '%s\n' "$$" > "$lock/pid"
+    for name in life-check life-digest; do
+      result=0
+      "${dc[@]}" exec -T --user hermes -e HOME=/opt/data life node --input-type=module - /opt/data/cron/jobs.json "$name" < scripts/cron-name.mjs || result=$?
+      if [[ $result == 0 ]]; then echo "$name already exists; left unchanged."; continue; fi
+      [[ $result == 1 ]] || { echo "Invalid cron store; refusing to create jobs." >&2; exit 1; }
+      if [[ $name == life-check ]]; then schedule='*/30 * * * *'; else schedule='0 9 * * *'; fi
+      task=$(cat "config/life/$name.md")
+      "${dc[@]}" exec --user hermes -e HOME=/opt/data life hermes cron create "$schedule" "$task" --name "$name" --timezone Europe/Belgrade --deliver telegram --model "$model" --provider openai-codex --reasoning-effort low --continuity --skill google --no-wrap-response --paused
+    done ;;
+  *) echo 'Usage: hermesctl {init|sync ROLE|migrate-bind-state|model ROLE MODEL|telegram ROLE|telegram-ids ROLE|login ROLE|chat ROLE|github-login|git-identity NAME EMAIL|validate|up|down|status|shell ROLE|cron-install}' >&2; exit 2 ;;
+esac

@@ -1,6 +1,8 @@
-# Hosting decision — not yet selected
+# Hosting decision — Railway selected
 
-User priorities: inexpensive, easy GitHub integration, deploy the existing persistent Hermes assistants. No hosting purchase or remote deployment has been made.
+User selected Railway and subscribed to Hobby. Source is public at https://github.com/parabolabam/hermes on branch `work/hermes`; private runtime state and credentials are excluded. Two empty projects, `hermes-life` and `hermes-coding`, are prepared. No remote services or state migration are complete yet; local assistants remain running.
+
+Deployment configuration and the cutover procedure are in [the Railway guide](../deploy/railway/README.md). The current blocker is authorization of the official Railway CLI, which requests workspace/project administration, SSH-key management, and persistent access.
 
 | Option | Fit | Integration / cost tradeoff |
 | --- | --- | --- |
@@ -24,8 +26,6 @@ Sources checked 2026-11-17:
 - https://developers.cloudflare.com/containers/platform/pricing/
 - https://developers.cloudflare.com/workers/ci-cd/builds/
 
-Observed local snapshot: life338.5MiB, coding376.8MiB, broker36.23MiB (about752MiB combined). This is one idle/live snapshot, not peak sizing. Cloudflare bills provisioned instance memory; Railway bills actual usage. Host has fly/flyctl and doctl installed, but no provider account or price approval has yet been verified for this deployment.
+Observed local snapshot: life338.5MiB, coding376.8MiB, broker36.23MiB (about752MiB combined). This is one idle/live snapshot, not peak sizing. Cloudflare bills provisioned instance memory; Railway bills actual usage. The Hobby subscription is confirmed; the eventual usage bill remains unmeasured.
 
-Next: select provider/verify its live quote, prepare the provider-specific deployment, then obtain approval before creating paid infrastructure. Do not add an orchestration framework.
-
-Browser: user permitted Brave specifically for Google setup. A hosting-browser inspection was rejected by automatic approval review as outside that exception. Pending question asks whether Brave may also be used for hosting setup; do not bypass that rejection. Public documentation research remains available.
+Next: authorize the official CLI, provision the three paused services and volumes, then migrate and verify them before stopping the local installation permanently. Keep life and coding in separate projects to preserve private-network separation.

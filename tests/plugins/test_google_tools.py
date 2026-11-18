@@ -5,6 +5,7 @@ from pathlib import Path
 import unittest
 import tempfile
 import sys
+import shutil
 from unittest.mock import patch
 from urllib.error import URLError
 
@@ -54,6 +55,7 @@ class GoogleToolsTests(unittest.TestCase):
     def test_redirects_cannot_forward_bearer_key(self):
         self.assertIsNone(self.module.NoRedirect().redirect_request(None,None,302,'redirect',{},'https://example.com'))
 
+@unittest.skipUnless(Path('/opt/hermes/hermes_yaml.py').exists(), 'requires pinned Hermes runtime')
 class ConfigureTests(unittest.TestCase):
     def test_preserves_account_settings_jobs_and_notepad_ids(self):
         spec = importlib.util.spec_from_file_location('google_configure_test', MODULE.with_name('configure.py'))
@@ -71,11 +73,30 @@ class ConfigureTests(unittest.TestCase):
             actual=module.yaml.safe_load((home/'config.yaml').read_text())
             self.assertEqual(actual['approval'],config['approval'])
             self.assertEqual(actual['model'],config['model'])
+            self.assertEqual(actual.get('tools',{}).get('tool_search',{}).get('enabled'),'off')
             self.assertEqual(actual['plugins']['enabled'],['existing','restricted-google'])
             actual_job=json.loads((home/'cron/jobs.json').read_text())['jobs'][0]
             self.assertEqual(actual_job,{**job,'prompt':'Use native tools'})
             before=(home/'config.yaml').read_bytes(),(home/'cron/jobs.json').read_bytes()
             module.configure(home,prompts)
             self.assertEqual(before,((home/'config.yaml').read_bytes(),(home/'cron/jobs.json').read_bytes()))
+
+@unittest.skipUnless(Path('/opt/hermes/hermes_yaml.py').exists(), 'requires pinned Hermes runtime')
+class NativeCatalogTests(unittest.TestCase):
+    def test_connected_google_tools_are_directly_visible_to_model(self):
+        spec=importlib.util.spec_from_file_location('configure_catalog_test',MODULE.with_name('configure.py'))
+        configure=importlib.util.module_from_spec(spec);spec.loader.exec_module(configure)
+        with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'HERMES_HOME':directory,'HOME':directory,'HERMES_ROLE':'life'}):
+            home=Path(directory); (home/'config.yaml').write_text('{}')
+            shutil.copytree(MODULE.parent,home/'plugins/restricted-google')
+            configure.configure(home)
+            sys.path.insert(0,'/opt/hermes')
+            from hermes_cli.plugins import discover_plugins
+            from model_tools import get_tool_definitions
+            discover_plugins()
+            definitions=get_tool_definitions(enabled_toolsets=['restricted_google'],quiet_mode=True)
+            names={item['function']['name'] for item in definitions}
+            expected={'google_accounts','google_gmail_list','google_gmail_read','google_gmail_label','google_gmail_draft','google_sheets_metadata','google_sheets_read','google_sheets_write'}
+            self.assertTrue(expected <= names, 'Connected Google tools must be directly visible, not hidden behind tool_search')
 
 if __name__ == '__main__': unittest.main()

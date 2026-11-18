@@ -28,8 +28,14 @@ def configure(home, prompts=None):
     if not isinstance(enabled, list): raise ValueError('Invalid plugins.enabled')
     if 'restricted-google' in plugins.get('disabled', []):
         raise ValueError('Managed Google connector is explicitly disabled')
+    changed = False
     if 'restricted-google' not in enabled:
-        enabled.append('restricted-google')
+        enabled.append('restricted-google'); changed = True
+    # These are the life assistant's primary connectors, not optional deferred tools.
+    search = config.setdefault('tools', {}).setdefault('tool_search', {})
+    if search.get('enabled') != 'off':
+        search['enabled'] = 'off'; changed = True
+    if changed:
         replace(path, yaml.safe_dump(config, sort_keys=False, allow_unicode=True))
     if prompts and (home / 'cron/jobs.json').is_file():
         path = home / 'cron/jobs.json'

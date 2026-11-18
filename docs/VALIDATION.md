@@ -1,6 +1,16 @@
 # Validation record
 
-2026-11-17. Repository: /Users/vladislav.sorokin/github/hermes. Local Compose project: hermes-assistants. Scope is personal Gmail for now; work Gmail is deferred. Railway deployment is authorized and in preparation, with the local installation still serving both assistants.
+Updated 2026-11-18. Repository: /Users/vladislav.sorokin/github/hermes. Personal Gmail is connected; work Gmail is deferred. Railway now serves both assistants. The local Compose project, hermes-assistants, is stopped with its volumes retained.
+
+## Verified Railway cutover
+
+- All three services have successful active deployments, one running replica, automatic restart, private persistent volumes and no public service URL. Life and its Google connector share one project; coding occupies a separate project.
+- Local services were stopped before export. Each private state archive was transferred only to its corresponding verified empty remote volume, its SHA-256 checksum checked, and ownership set to UID/GID 1000. Private local backups are retained. Schedule databases passed SQLite integrity checks and the native notepad keys persisted.
+- Both agent processes passed native s6 gateway, non-root UID and mode0600 control-socket checks. Real Telegram requests received HERMES_LIFE_RAILWAY_READY and HERMES_CODING_RAILWAY_READY replies after cutover, observed in the Telegram app. These exercise the existing subscription from Railway; no API-key fallback was added.
+- The remote broker reports one account, three trackers and configured private Telegram delivery. Real Gmail listing and metadata access for subscriptions, taxes and debts succeeded. A previously recorded real subscription update has confirmed status, delivered notification and matching live Sheet readback; no additional mutation was made for this check.
+- A native life-check execution on Railway completed with delivery_outcome delivered at 2026-11-18T00:02:51Z. Both production schedules remain enabled. A manual validation trigger found the scheduler already firing the job and did not start a duplicate.
+- Coding's GitHub identity is parabolabam / User with personal Git attribution. Coding has no life connector key, and its private DNS cannot resolve the Google connector. A read-only helper-delegation smoke test returned WORKER_READY:323; its native session is retained privately.
+- Runtime file changes on GitHub branch work/hermes trigger builds; documentation changes are excluded. Railway requires the RAILWAY_DOCKERFILE_PATH variable for reliable custom Dockerfile selection. A fresh source deployment with current settings succeeded after attempts to clone the old deployment snapshot used outdated build configuration.
 
 ## Working connections
 
@@ -27,5 +37,5 @@
 - Gmail send/archive/delete/mark-read and arbitrary upstream proxy routes are absent. Drafts require review and human sending in Gmail. Sheet writes compare expected values and preserve formulas, but cannot promise atomicity against other editors. Notifications are at least once; ambiguous remote delivery can duplicate.
 - Agent judgments about importance and financial evidence remain model judgments. The setup did not fabricate a real payment or alter a tracker to test mutations. Formula protection and mutation plumbing were exercised in offline/synthetic fixtures.
 - Google app is currently External/Testing; its refresh grant expires after seven days under Google's policy. Reauthorization or production OAuth configuration will be needed for longer uninterrupted use: https://developers.google.com/identity/protocols/oauth2#expiration
-- The local Mac must be awake with Docker running until Railway cutover is verified. Railway images built and synthetic first-boot checks passed, but remote services, state transfer and remote end-to-end behavior remain unverified. Tested disaster recovery, a future Anthropic subscription and any credit purchases remain outside this delivery.
+- Railway now runs independently of the Mac. Keep the old local gateways stopped to avoid duplicate Telegram polling and provider refreshes. Disaster recovery remains untested; stale cutover grants may require fresh snapshots or reauthorization before rollback. A future Anthropic subscription and credit purchases remain outside this delivery.
 - Interrupted broad-review artifacts remain historical. The user explicitly rejected further architecture expansion. Do not resume that wave by default or claim its outstanding findings were all fixed.

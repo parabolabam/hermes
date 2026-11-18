@@ -1,7 +1,0 @@
-[build]
-builder = "DOCKERFILE"
-dockerfilePath = "deploy/railway/google.Dockerfile"
-
-[deploy]
-numReplicas = 1
-restartPolicyType = "ALWAYS"

@@ -1,8 +1,8 @@
 # Hosting decision — Railway selected
 
-User selected Railway and subscribed to Hobby. Source is public at https://github.com/parabolabam/hermes on branch `work/hermes`; private runtime state and credentials are excluded. Two empty projects, `hermes-life` and `hermes-coding`, are prepared. No remote services or state migration are complete yet; local assistants remain running.
+User selected Railway and subscribed to Hobby. Source is public at https://github.com/parabolabam/hermes on branch `work/hermes`; private runtime state and credentials are excluded. `hermes-life` now runs life and the private Google connector; `hermes-coding` runs coding. State migration completed with verified checksums. All three services have one running replica and private persistent volumes; neither project exposes a public service URL. Local containers are stopped.
 
-Deployment configuration and the cutover procedure are in [the Railway guide](../deploy/railway/README.md). The current blocker is authorization of the official Railway CLI, which requests workspace/project administration, SSH-key management, and persistent access.
+Deployment configuration and the cutover procedure are in [the Railway guide](../deploy/railway/README.md). The official CLI and the credential/state transfer were explicitly authorized. Both Telegram replies, Gmail/Sheets access, coding GitHub identity and a scheduled life-check delivery were verified from Railway.
 
 | Option | Fit | Integration / cost tradeoff |
 | --- | --- | --- |
@@ -28,4 +28,4 @@ Sources checked 2026-11-17:
 
 Observed local snapshot: life338.5MiB, coding376.8MiB, broker36.23MiB (about752MiB combined). This is one idle/live snapshot, not peak sizing. Cloudflare bills provisioned instance memory; Railway bills actual usage. The Hobby subscription is confirmed; the eventual usage bill remains unmeasured.
 
-Next: authorize the official CLI, provision the three paused services and volumes, then migrate and verify them before stopping the local installation permanently. Keep life and coding in separate projects to preserve private-network separation.
+Keep life and coding in separate projects to preserve private-network separation. Monitor measured usage rather than treating the Hobby subscription as a fixed total bill. Google OAuth's seven-day Testing-mode lifetime remains an operational limitation; see the validation record.

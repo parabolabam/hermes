@@ -1,7 +1,0 @@
-[build]
-builder = "DOCKERFILE"
-dockerfilePath = "deploy/railway/agent.Dockerfile"
-
-[deploy]
-numReplicas = 1
-restartPolicyType = "ALWAYS"

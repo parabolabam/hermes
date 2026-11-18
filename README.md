@@ -1,8 +1,10 @@
 # Hermes assistants
 
-Two separate Hermes homes and networks: `life` for personal support and `coding` for on-demand development. Google access requires a separate restricted connector, which must be installed and authorized before life can use Google. No Google credentials are placed in either Hermes container. The model uses fresh, separate OpenAI Codex OAuth logins, not host credentials or API-key fallbacks. This is local preparation, not a verified deployment.
+Two separate Hermes homes and networks: `life` for personal support and `coding` for on-demand development. A restricted connector provides Google access; no Google credentials are placed in either Hermes container. The model uses separate OpenAI Codex subscription logins, without API-key fallbacks. The three services are deployed on Railway with persistent private volumes.
 
-This installation is connected: life is @parabolabam_ultron_bot and coding is @parabolabam_jarvis_bot. Both use the authorized OpenAI subscription. Personal Gmail and all three selected Sheets are connected; work Gmail is deferred at the user’s request. The life check runs every 30 minutes and the daily digest at 09:00 Europe/Belgrade. Coding stays on demand. Local chat also works with `./hermesctl chat life` or `./hermesctl chat coding`. This runs on the local Mac while Docker is running and the machine is awake; no VPS has been deployed.
+Life is @parabolabam_ultron_bot and coding is @parabolabam_jarvis_bot. Both replied through Telegram after Railway cutover. Personal Gmail and all three selected Sheets are connected; work Gmail is deferred at the user's request. Life checks every 30 minutes and sends a daily digest at 09:00 Europe/Belgrade. Coding stays on demand and can delegate to helper agents. GitHub is connected as the user's account. See [validation](docs/VALIDATION.md) and the [Railway guide](deploy/railway/README.md).
+
+The local containers are stopped and their volumes retained as cutover backups. **Do not start the local gateways or use local chat/login while Railway is active**: duplicate instances would share bot tokens and provider grants. The local setup instructions below are for a fresh installation. Google OAuth remains in External/Testing mode and requires reauthorization after seven days unless its publishing configuration changes.
 
 ## Prerequisites and initialization
 
@@ -34,10 +36,10 @@ Run offline checks with `cd google && npm ci && npm run check && npm test`. `goo
 
 Once model, login and Telegram are configured, `./hermesctl cron-install` installs two native jobs with stable names, paused by default: every 30 minutes and 09:00 Europe/Belgrade. Existing jobs are left unchanged. Review them in Hermes before manually resuming, and resume only after Google authorization and notification delivery have been verified. Model or schedule changes do not rewrite existing jobs. A running gateway can maintain cron without messaging being connected, but delivery requires Telegram.
 
-## Moving to a VPS later
+## Railway deployment and recovery
 
-The Compose project is pinned to `hermes-assistants`. A complete migration must preserve `hermes-assistants_life-state`, `hermes-assistants_coding-state`, and the private `.runtime` directory. They contain account grants, Telegram tokens, sessions, cron jobs and the native job notepad. Never print resolved Compose configuration or upload these files to an untrusted destination.
+Railway uses separate `hermes-life` and `hermes-coding` projects. Life and coding each mount `/opt/data`; the Google connector mounts `/data` in the life project. Bot credentials and the connector key are Railway variables; mutable OAuth/GitHub grants, sessions and memories remain on their respective private volumes. There are no public service domains. Runtime changes on GitHub branch `work/hermes` trigger builds; documentation changes are excluded.
 
-Backup/restore and VPS delivery have not been validated. Before migration, stop all writers, export a fresh backup without overwriting an existing archive, inspect every source volume, and validate all archives and empty destinations before extracting anything. Do not restore over existing credentials or live state. The previous unverified copy/paste restore example has been removed. Validate the destination UID/GID and socket permissions before starting.
+The completed cutover stopped all local writers, exported private archives, verified remote destinations were empty, checked transfer checksums, and restored state with UID/GID 1000. Both remote gateways and real connections were verified. Local archives remain private under `.runtime/migration`; no credentials or tracker IDs are in the public repository. Disaster recovery has not been tested. For rollback, stop remote writers first and obtain a fresh snapshot or reauthorize: provider refreshes can make the old local login state stale. Never restore over existing credentials or run both installations concurrently.
 
 The activation policy deliberately accepts only the provided canonical configuration, a selected model, Hermes's version marker, and optional medium reasoning. Other config edits require updating and reviewing the validator as well. An interrupted installer normally releases its cron lock; if forcibly killed, confirm no installer is running before removing the reported stale lock directory.

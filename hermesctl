@@ -41,8 +41,17 @@ sync_role() {
   [[ -z $("${dc[@]}" ps --status running -q "$1") ]] || { echo "$1 is running; stop it before syncing managed files." >&2; return 1; }
   node scripts/config.mjs policy "$1"
   if [[ $1 == life ]]; then skill=google; else skill=workflow; fi
-  tar -C ".runtime/$1" -cf - config.yaml SOUL.md "skills/$skill" |
+  if [[ $1 == life ]]; then
+    mkdir -p .runtime/life/plugins/restricted-google
+    cp plugins/restricted-google/*.py plugins/restricted-google/plugin.yaml .runtime/life/plugins/restricted-google/
+  fi
+  managed=(config.yaml SOUL.md "skills/$skill")
+  [[ $1 != life ]] || managed+=(plugins/restricted-google)
+  tar -C ".runtime/$1" -cf - "${managed[@]}" |
     "${dc[@]}" run -T --rm --no-deps --user 0 --entrypoint sh "$1" -c 'set -eu; tar -xf - -C /opt/data; chown "$1:$2" /opt/data/config.yaml /opt/data/SOUL.md; chown -R "$1:$2" "/opt/data/skills/$3"; mkdir -p /opt/data/home; chown "$1:$2" /opt/data /opt/data/home; chmod 600 /opt/data/config.yaml' sh "$(id -u)" "$(id -g)" "$skill"
+  if [[ $1 == life ]]; then
+    "${dc[@]}" run -T --rm --no-deps --user 0 --entrypoint sh life -c 'set -eu; chown -R "$1:$2" /opt/data/plugins/restricted-google; /opt/hermes/.venv/bin/python /opt/data/plugins/restricted-google/configure.py /opt/data' sh "$(id -u)" "$(id -g)"
+  fi
   "${dc[@]}" run -T --rm --no-deps --user "$(id -u):$(id -g)" --entrypoint node "$1" --input-type=module < scripts/check-native-env.mjs
 }
 setup_command() {

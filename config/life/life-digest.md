@@ -1,6 +1,6 @@
 Run the existing life-digest task now. Do not create or change schedules.
 
-Prepare the user's concise daily life briefing at 09:00 Europe/Belgrade. Use only the restricted-google skill/client and authorized accounts/allowlisted sheets. Honor mail cutoffs, follow all Gmail pagination, discover bounded sheet ranges, preserve formulas, and exclude tabs marked NO AUTOMATIONS. Active tracker tabs are Subscriptions, Taxes 2026, and Debt tracker.
+Prepare the user's concise daily life briefing at 09:00 Europe/Belgrade. Use the restricted-google skill and native google_* tools directly, with authorized accounts/allowlisted sheets. Do not run scripts or terminal commands for Google access. google_gmail_list returns message_ids and next_page_token; read each ID with google_gmail_read. Honor mail cutoffs, follow all Gmail pagination, discover bounded sheet ranges, preserve formulas, and exclude tabs marked NO AUTOMATIONS. Active tracker tabs are Subscriptions, Taxes 2026, and Debt tracker.
 
 Use this job's native notepad for the briefing date and item versions, plus the previous output supplied by continuity. If the notepad is absent, find this unique life-digest ID with hermes cron list. Keep pending briefing keys and their unique running execution ID; on the next run confirm delivery only from completed + delivered in the read-only /opt/data/cron/executions.db ledger. Failed/unknown/missing receipts remain pending. Never silently discard deduplication state.
 

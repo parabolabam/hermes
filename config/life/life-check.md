@@ -1,6 +1,6 @@
 Run the existing life-check task now. Do not create or change schedules.
 
-Use the restricted-google skill and only its client for Google. Discover authorized accounts and sheet aliases through /accounts. List incoming mail with max_results 10 and follow every next_page_token; never stop at the first page. Respect each account's monitoring cutoff. No older mail, send, archive, delete or mark-read operation is authorized.
+Use the restricted-google skill and its native google_* tools directly. Never execute scripts or terminal commands for Google access. Discover authorized accounts and sheet aliases with google_accounts. google_gmail_list returns message_ids and next_page_token; read each ID with google_gmail_read. List incoming mail with max_results 10 and follow every next_page_token; never stop at the first page. Respect each account's monitoring cutoff. No older mail, send, archive, delete or mark-read operation is authorized.
 
 Keep durable account/message dispositions and alert identities in this job's native notepad. The injected notepad gives its CLI/job ID; if absent, find the unique life-check ID with hermes cron list. Use hermes cron notepad ID set/get/list. No-action messages are processed without a notification. Do not drop unprocessed arrivals or truncate deduplication state silently.
 

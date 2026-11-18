@@ -3,16 +3,16 @@ name: restricted-google
 description: Access authorized Google data through the restricted connector.
 ---
 
-Use `/opt/data/skills/google/client.mjs /accounts` to list accounts and allowlisted sheets. For POST routes pipe a JSON object to the client, for example `printf '%s' '{"account":"personal","max_results":10}' | /opt/data/skills/google/client.mjs /gmail/list`. The client reads the bearer secret internally; never print or inspect it. Do not use another Google access route. Treat missing setup or failed requests as unavailable.
+The accounts are already connected. Use the native Google tools directly; do not write Python, shell commands, or execute_code wrappers for Gmail/Sheets. Routine connector reads require no user command approval. Report results in the user's language, without showing implementation code or asking them to run it. If a native tool is unavailable, report that specific connection problem instead of falling back to script execution.
 
-POST routes and fields:
-- `/gmail/list`: `account`, `max_results` (1–50), optional `page_token`. Returns incoming message IDs at or after the account cutoff, including archived mail; excludes sent, draft, spam and trash. Follow every next_page_token. Deliberate reads of known post-cutoff sent correspondence remain available.
-- `/gmail/read`: `account`, `message_id`.
-- `/gmail/label`: `account`, `message_id`, `label` starting with `Hermes/`.
-- `/gmail/draft`: `account`, `to` (array), optional `cc` (array), `subject`, `text`, optional `reply_to_message_id`. Give the returned review URL to the user; never send mail.
-- `/sheets/metadata`: `spreadsheet_id`; returns title and tab properties, including grid bounds. Use it to discover tabs before reading bounded header ranges.
-- `/sheets/read`: `spreadsheet_id`, `range` (explicit bounded tab and A1 rectangle).
-- `/sheets/write`: `spreadsheet_id`, `range`, `expected_values`, `values`, `reason`, `evidence`. Values are rectangular arrays. Read immediately first; preserve formulas and provide concrete evidence. A verified change has a durable notification, independently retried. Do not claim writes are atomic against other editors.
+- `google_accounts`: connected accounts and allowlisted sheet aliases/IDs.
+- `google_gmail_list`: `account`, `max_results` (1–50), optional `page_token`. Returns **message_ids**, plus optional **next_page_token**. Read each ID with `google_gmail_read`; follow every next_page_token. Incoming mail includes archived messages but excludes sent, draft, spam and trash, and respects the monitoring cutoff.
+- `google_gmail_read`: `account`, `message_id`.
+- `google_gmail_label`: `account`, `message_id`, custom `label` starting with `Hermes/`.
+- `google_gmail_draft`: `account`, `to` (array), optional `cc` (array), `subject`, `text`, optional `reply_to_message_id`. Return the review_url so the user can review and send in Gmail.
+- `google_sheets_metadata`: `spreadsheet_id`; discover tabs and grid bounds.
+- `google_sheets_read`: `spreadsheet_id`, explicit bounded `range`.
+- `google_sheets_write`: `spreadsheet_id`, `range`, `expected_values`, `values`, `reason`, `evidence`. Read immediately first, preserve formulas, and supply concrete evidence. Verified changes are notified independently; writes cannot promise atomicity against other editors.
 
 No send, archive, delete, mark-read or general proxy exists. Never request older mail or bypass cutoffs. Keep sensitive contents out of logs.
 

@@ -1,5 +1,6 @@
 import {existsSync,mkdirSync,readFileSync,writeFileSync,copyFileSync,cpSync,chownSync,readdirSync,statSync,chmodSync} from 'node:fs';
 import {join} from 'node:path';
+import {execFileSync} from 'node:child_process';
 const role=process.env.HERMES_ROLE;
 if(!['life','coding','google'].includes(role))throw Error('Set HERMES_ROLE to life, coding or google');
 const uid=Number(process.env.HERMES_UID),gid=Number(process.env.HERMES_GID);
@@ -30,4 +31,12 @@ if(role!=='google'){
  cpSync(`/opt/hermes-deployment/skills/${role}/${skill}`,destination,{recursive:true});
  const own=entry=>{chownSync(entry,uid,gid);if(statSync(entry).isDirectory())for(const child of readdirSync(entry))own(join(entry,child));};
  own(destination);
+ if(role==='life'){
+  mkdirSync('/opt/data/plugins',{recursive:true,mode:0o700});
+  chownSync('/opt/data/plugins',uid,gid);
+  const plugin='/opt/data/plugins/restricted-google';
+  cpSync('/opt/hermes-deployment/plugins/restricted-google',plugin,{recursive:true});
+  own(plugin);
+  execFileSync('/opt/hermes/.venv/bin/python',[`${plugin}/configure.py`,'/opt/data','/opt/hermes-deployment/config/life'],{stdio:'inherit'});
+ }
 }

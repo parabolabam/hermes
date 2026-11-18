@@ -3,3 +3,5 @@
 google/node_modules/
 .superpowers/
 HANDOFF.md
+
+__pycache__/

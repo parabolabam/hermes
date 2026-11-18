@@ -1,0 +1,12 @@
+name: restricted-google
+version: 1.0.0
+description: Native Gmail and Sheets tools through the configured private connector.
+provides_tools:
+  - google_accounts
+  - google_gmail_list
+  - google_gmail_read
+  - google_gmail_label
+  - google_gmail_draft
+  - google_sheets_metadata
+  - google_sheets_read
+  - google_sheets_write

@@ -3,7 +3,9 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-cp -R "$root/compose.yaml" "$root/hermesctl" "$root/config" "$root/skills" "$root/scripts" "$tmp/"
+cp -R "$root/compose.yaml" "$root/hermesctl" "$root/config" "$root/skills" "$root/scripts" "$root/plugins" "$tmp/"
+mkdir -p "$tmp/google"
+cp "$root/google/telegram.ts" "$tmp/google/telegram.ts"
 cd "$tmp"
 ./hermesctl init >/dev/null
 printf 'preserve me\n' >> .runtime/life/SOUL.md
@@ -87,6 +89,7 @@ if [[ "$*" == *' exec -T --user root '* ]]; then
   count=$((count + 1)); printf '%s' "$count" > "$READINESS_FAKE_STATE"
   (( count >= ${FAKE_READY_AFTER:-999} )); exit
 fi
+if [[ "$*" == *'/opt/data/plugins/restricted-google/configure.py'* ]]; then exit 0; fi
 if [[ "$*" == *' run '* && "$*" == *' --entrypoint sh '* ]]; then mkdir -p .fakevol/life; tar -xf - -C .fakevol/life; exit 0; fi
 if [[ "$*" == *' run '* && "$*" == *' --entrypoint node '* ]]; then cat >/dev/null; node scripts/check-native-env.mjs .fakevol/life/.env; exit; fi
 if [[ "$*" == *' --input-type=module '* ]]; then name=${!#}; node scripts/cron-name.mjs .fakevol/life/cron/jobs.json "$name"; exit; fi

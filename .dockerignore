@@ -1,2 +1,4 @@
 .runtime
 .git
+
+__pycache__/

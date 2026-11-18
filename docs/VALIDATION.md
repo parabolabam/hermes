@@ -10,10 +10,18 @@ Updated 2026-11-18. Repository: /Users/vladislav.sorokin/github/hermes. Personal
 - The remote broker reports one account, three trackers and configured private Telegram delivery. Real Gmail listing and metadata access for subscriptions, taxes and debts succeeded. A previously recorded real subscription update has confirmed status, delivered notification and matching live Sheet readback; no additional mutation was made for this check.
 - A native life-check execution on Railway completed with delivery_outcome delivered at 2026-11-18T00:02:51Z. Both production schedules remain enabled. A manual validation trigger found the scheduler already firing the job and did not start a duplicate.
 - Coding's GitHub identity is parabolabam / User with personal Git attribution. Coding has no life connector key, and its private DNS cannot resolve the Google connector. A read-only helper-delegation smoke test returned WORKER_READY:323; its native session is retained privately.
-- Runtime file changes on GitHub branch work/hermes trigger builds; documentation changes are excluded. Railway requires the RAILWAY_DOCKERFILE_PATH variable for reliable custom Dockerfile selection. A fresh source deployment with current settings succeeded after attempts to clone the old deployment snapshot used outdated build configuration.
+- Railway source is GitHub branch work/hermes. Watch patterns select runtime files and exclude documentation, but an automatic rollout on source push has not been verified; the native connector rollout was explicitly triggered. Railway requires the RAILWAY_DOCKERFILE_PATH variable for reliable custom Dockerfile selection. A fresh source deployment with current settings succeeded after attempts to clone the old deployment snapshot used outdated build configuration.
 - Google Auth Platform visibly reports In production. Public app-information links point to this repository, with github.com registered as their authorized domain. The operator explicitly approved these settings and completed Google's unverified-app warning. A fresh personal refresh grant was issued after publishing, with no refresh_token_expires_in in Google's response and the original monitoring cutoff preserved. The seven-day Testing limit is removed; this is a personal-use app, not a verified public multi-user service.
 
 ## Working connections
+
+### Mail UX regression fixed
+
+The command-line-only Google skill caused a routine mail question to request script approval. Google access now uses eight native tools backed by the same restricted broker. Hermes's progressive tool discovery initially hid these tools from the model; the life role now exposes them directly. General command approvals are unchanged.
+
+Six focused tests pass in the pinned Hermes runtime, including model-visible tool definitions, no process execution for connector calls, redirect refusal, mutation uncertainty, and preservation of existing config/job state. Existing offline role setup checks pass. The life image was deployed successfully with this fix.
+
+The exact Russian mail question was sent through Telegram. A normal Russian mail summary was observed without an approval prompt. The native transcript records google_accounts, google_gmail_list and google_gmail_read, with zero terminal or execute_code calls. This verifies the user-facing connector path, beyond account authentication or a readiness-token reply.
 
 - Both gateways run the pinned official Hermes v0.23.2 runtime in separate native volumes/networks. No public broker port or host Docker socket. OAuth, memories and coding state remain separated.
 - Separate native OpenAI-Codex subscription grants; both roles freshly answered real model requests. No inference API-key fallback or paid provider enabled.

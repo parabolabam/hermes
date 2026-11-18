@@ -20,7 +20,7 @@ Use `./hermesctl validate` to check activation inputs, then `./hermesctl up` to 
 
 ## Coding
 
-With coding stopped, run `./hermesctl github-login` for a fresh interactive user GitHub login; no host credentials are mounted. Configure verified personal identity with `./hermesctl git-identity 'Your Name' 'you@example.com'`. Authorize only selected repositories and verify access and identity before use. User review is required before merge or deployment. The persona directs the agent not to use bot authors or trailers; Git identity settings and this instruction are not a tamper-proof enforcement boundary. No coding cron jobs are installed.
+With coding stopped, run `./hermesctl github-login` for a fresh interactive user GitHub login; no host credentials are mounted. Login includes `read:project` so GitHub Projects boards are available without a second permission setup. Configure verified personal identity with `./hermesctl git-identity 'Your Name' 'you@example.com'`. Work only in explicitly selected repositories and verify access and identity before use. User review is required before merge or deployment. The persona directs the agent not to use bot authors or trailers; Git identity settings and this instruction are not a tamper-proof enforcement boundary. No coding cron jobs are installed.
 
 ## Google and scheduled work
 

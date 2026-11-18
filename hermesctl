@@ -97,7 +97,7 @@ case "${1-}" in
   chat)
     role_check "${2-}"; role=$2; shift 2
     setup_command "$role" /opt/data hermes chat "$@" ;;
-  github-login) setup_command coding /opt/data/home gh auth login ;;
+  github-login) setup_command coding /opt/data/home gh auth login --scopes read:project ;;
   git-identity)
     name=${2-}; email=${3-}
     [[ -n $name && $email == *@* && ! $name =~ [Bb][Oo][Tt] && ! $email =~ [Bb][Oo][Tt] ]] || { echo 'Provide your personal Git name and email, not a bot identity.' >&2; exit 1; }

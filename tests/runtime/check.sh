@@ -7,7 +7,18 @@ cp -R "$root/compose.yaml" "$root/hermesctl" "$root/config" "$root/skills" "$roo
 mkdir -p "$tmp/google"
 cp "$root/google/telegram.ts" "$tmp/google/telegram.ts"
 cd "$tmp"
+mkdir -p skills/life/synthetic/references
+printf 'reviewed skill\n' > skills/life/synthetic/SKILL.md
+printf 'synthetic example\n' > skills/life/synthetic/references/example.md
+git init -q
+git config user.name 'Runtime Fixture'
+git config user.email 'fixture@example.invalid'
+git config commit.gpgsign false
+git add scripts/install-skills.mjs skills
+git -c core.hooksPath=/dev/null commit -qm 'Commit fixture skill packages'
 ./hermesctl init >/dev/null
+cmp skills/life/synthetic/SKILL.md .runtime/life/skills/synthetic/SKILL.md
+[[ ! -e .runtime/coding/skills/synthetic ]]
 printf 'preserve me\n' >> .runtime/life/SOUL.md
 before=$(shasum -a 256 .runtime/life/SOUL.md .runtime/secrets/life-api-key)
 ./hermesctl init >/dev/null
@@ -90,6 +101,15 @@ if [[ "$*" == *' exec -T --user root '* ]]; then
   (( count >= ${FAKE_READY_AFTER:-999} )); exit
 fi
 if [[ "$*" == *'/opt/data/plugins/restricted-google/configure.py'* ]]; then exit 0; fi
+if [[ "$*" == *' run '* && "$*" == *'install-skills.mjs'* ]]; then
+  role=${!#}
+  for arg; do
+    if [[ $arg == *'install-skills.mjs'* ]]; then
+      sh -c "${arg//\/opt\/data\/skills/.fakevol\/$role\/skills}" sh "$role"
+      exit
+    fi
+  done
+fi
 if [[ "$*" == *' run '* && "$*" == *' --entrypoint sh '* ]]; then mkdir -p .fakevol/life; tar -xf - -C .fakevol/life; exit 0; fi
 if [[ "$*" == *' run '* && "$*" == *' --entrypoint node '* ]]; then cat >/dev/null; node scripts/check-native-env.mjs .fakevol/life/.env; exit; fi
 if [[ "$*" == *' --input-type=module '* ]]; then name=${!#}; node scripts/cron-name.mjs .fakevol/life/cron/jobs.json "$name"; exit; fi
@@ -115,8 +135,24 @@ grep -q 'coding gateway not ready' readiness.out
 PATH="$tmp/fakebin:$PATH" ./hermesctl sync life >/dev/null
 [[ $(cat .fakevol/life/auth.json) == preserved-auth ]]
 cmp .runtime/life/config.yaml .fakevol/life/config.yaml
+cmp skills/life/synthetic/references/example.md .fakevol/life/skills/synthetic/references/example.md
+[[ ! -e .fakevol/life/skills/workflow ]]
+mkdir -p .fakevol/life/skills/private .runtime/life/skills/staging-only
+printf 'private fixture\n' > .fakevol/life/skills/private/SKILL.md
+printf 'staging fixture\n' > .runtime/life/skills/staging-only/SKILL.md
+printf 'new reviewed revision\n' > skills/life/synthetic/SKILL.md
+git add skills/life/synthetic/SKILL.md
+git -c core.hooksPath=/dev/null commit -qm 'Update fixture skill'
+printf 'untracked support file\n' > skills/life/synthetic/references/private.md
+mkdir -p skills/life/untracked
+printf 'untracked skill\n' > skills/life/untracked/SKILL.md
 PATH="$tmp/fakebin:$PATH" ./hermesctl sync life >/dev/null
 [[ $(cat .fakevol/life/auth.json) == preserved-auth ]]
+cmp skills/life/synthetic/SKILL.md .fakevol/life/skills/synthetic/SKILL.md
+[[ $(cat .fakevol/life/skills/private/SKILL.md) == 'private fixture' ]]
+[[ ! -e .fakevol/life/skills/staging-only ]]
+[[ ! -e .fakevol/life/skills/synthetic/references/private.md ]]
+[[ ! -e .fakevol/life/skills/untracked ]]
 PATH="$tmp/fakebin:$PATH" ./hermesctl cron-install >/dev/null & a=$!
 PATH="$tmp/fakebin:$PATH" ./hermesctl cron-install >/dev/null & b=$!
 wait "$a"; wait "$b"

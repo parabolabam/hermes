@@ -13,6 +13,7 @@ RUN set -eu; \
     rm -rf /tmp/gh.tar.gz "/tmp/gh_2.104.0_linux_${TARGETARCH}"
 COPY config /opt/hermes-deployment/config
 COPY skills /opt/hermes-deployment/skills
+COPY scripts/install-skills.mjs /opt/hermes-deployment/install-skills.mjs
 COPY plugins/restricted-google /opt/hermes-deployment/plugins/restricted-google
 COPY deploy/railway/prepare.mjs /opt/hermes-deployment/prepare.mjs
 COPY deploy/railway/entrypoint.sh /opt/hermes-deployment/entrypoint.sh

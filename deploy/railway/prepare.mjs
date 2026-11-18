@@ -1,6 +1,7 @@
 import {existsSync,mkdirSync,readFileSync,writeFileSync,copyFileSync,cpSync,chownSync,readdirSync,statSync,chmodSync} from 'node:fs';
 import {join} from 'node:path';
 import {execFileSync} from 'node:child_process';
+import {installSkills} from './install-skills.mjs';
 const role=process.env.HERMES_ROLE;
 if(!['life','coding','google'].includes(role))throw Error('Set HERMES_ROLE to life, coding or google');
 const uid=Number(process.env.HERMES_UID),gid=Number(process.env.HERMES_GID);
@@ -26,11 +27,8 @@ if(role!=='google'){
  }
  const soul='/opt/data/SOUL.md';
  copyFileSync(`/opt/hermes-deployment/config/${role}/AGENTS.md`,soul);chownSync(soul,uid,gid);
- const skill=role==='life'?'google':'workflow';
- const destination=`/opt/data/skills/${skill}`;
- cpSync(`/opt/hermes-deployment/skills/${role}/${skill}`,destination,{recursive:true});
+ installSkills(`/opt/hermes-deployment/skills/${role}`,'/opt/data/skills',{own:entry=>chownSync(entry,uid,gid)});
  const own=entry=>{chownSync(entry,uid,gid);if(statSync(entry).isDirectory())for(const child of readdirSync(entry))own(join(entry,child));};
- own(destination);
  if(role==='life'){
   mkdirSync('/opt/data/plugins',{recursive:true,mode:0o700});
   chownSync('/opt/data/plugins',uid,gid);

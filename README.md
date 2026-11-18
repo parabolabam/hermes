@@ -4,7 +4,7 @@ Two separate Hermes homes and networks: `life` for personal support and `coding`
 
 Life is @parabolabam_ultron_bot and coding is @parabolabam_jarvis_bot. Both replied through Telegram after Railway cutover. Personal Gmail and all three selected Sheets are connected; work Gmail is deferred at the user's request. Life checks every 30 minutes and sends a daily digest at 09:00 Europe/Belgrade. Coding stays on demand and can delegate to helper agents. GitHub is connected as the user's account. See [validation](docs/VALIDATION.md) and the [Railway guide](deploy/railway/README.md).
 
-The local containers are stopped and their volumes retained as cutover backups. **Do not start the local gateways or use local chat/login while Railway is active**: duplicate instances would share bot tokens and provider grants. The local setup instructions below are for a fresh installation. Google OAuth remains in External/Testing mode and requires reauthorization after seven days unless its publishing configuration changes.
+The local containers are stopped and their volumes retained as cutover backups. **Do not start the local gateways or use local chat/login while Railway is active**: duplicate instances would share bot tokens and provider grants. The local setup instructions below are for a fresh installation. Google OAuth is in Production mode with a freshly renewed personal grant; the seven-day Testing expiry has been removed.
 
 ## Prerequisites and initialization
 

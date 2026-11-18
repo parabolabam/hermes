@@ -28,4 +28,4 @@ Sources checked 2026-11-17:
 
 Observed local snapshot: life338.5MiB, coding376.8MiB, broker36.23MiB (about752MiB combined). This is one idle/live snapshot, not peak sizing. Cloudflare bills provisioned instance memory; Railway bills actual usage. The Hobby subscription is confirmed; the eventual usage bill remains unmeasured.
 
-Keep life and coding in separate projects to preserve private-network separation. Monitor measured usage rather than treating the Hobby subscription as a fixed total bill. Google OAuth's seven-day Testing-mode lifetime remains an operational limitation; see the validation record.
+Keep life and coding in separate projects to preserve private-network separation. Monitor measured usage rather than treating the Hobby subscription as a fixed total bill. Google OAuth is now in Production with a fresh personal grant, removing the seven-day Testing limit; see the validation record.

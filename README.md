@@ -1,45 +1,40 @@
-# Hermes assistants
+# Hermes Assistants
 
-Two separate Hermes homes and networks: `life` for personal support and `coding` for on-demand development. A restricted connector provides Google access; no Google credentials are placed in either Hermes container. The model uses separate OpenAI Codex subscription logins, without API-key fallbacks. The three services are deployed on Railway with persistent private volumes.
+A personal deployment of [Hermes Agent](https://github.com/NousResearch/hermes-agent) with two separate Telegram assistants. One handles personal follow-ups; the other works on code you explicitly ask it to change.
 
-Life is @parabolabam_ultron_bot and coding is @parabolabam_jarvis_bot. Both replied through Telegram after Railway cutover. Personal Gmail and all three selected Sheets are connected; work Gmail is deferred at the user's request. Life uses native Google tools for routine requests, without asking the user to approve scripts. Life checks every 30 minutes and sends a daily digest at 09:00 Europe/Belgrade. Coding stays on demand and can delegate to helper agents. GitHub is connected as the user's account. See [validation](docs/VALIDATION.md) and the [Railway guide](deploy/railway/README.md).
+[Local setup](docs/LOCAL-SETUP.md) · [Railway guide](deploy/railway/README.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md)
 
-The local containers are stopped and their volumes retained as cutover backups. **Do not start the local gateways or use local chat/login while Railway is active**: duplicate instances would share bot tokens and provider grants. The local setup instructions below are for a fresh installation. Google OAuth is in Production mode with a freshly renewed personal grant; the seven-day Testing expiry has been removed.
+| Assistant | What it does |
+| --- | --- |
+| **Life** | Reviews recent Gmail and selected Google Sheets through a restricted connector. It can prepare drafts for review, but cannot send mail. A fresh installation can add scheduled checks and digests, paused by default. |
+| **Coding** | Works in authorized repositories on demand. Changes go to a draft pull request for review rather than straight to `main`. It has no access to the Google connector. |
 
-## Prerequisites and initialization
+The agents have separate networks, provider logins and persistent state. The connector keeps Google credentials outside both agents. This repository contains the deployment code and docs, not the private account state. See the [data-use notice](docs/PRIVACY.md) for what the life assistant processes.
 
-Install Docker Engine and either the Compose plugin or standalone `docker-compose`, Node.js 24 or newer and OpenSSL. From this directory run `./hermesctl init`. It creates private ignored `.runtime` state, private connector bearer key and editable initial configs; rerunning preserves existing files. Both services retain the upstream s6 entrypoint and run as root only for bootstrap, with upstream's UID/GID remap. Live Hermes homes, OAuth grants, sessions and cron state live in separate Docker-native `life-state` and `coding-state` volumes. `.runtime/life` and `.runtime/coding` hold operator-managed staging files; `.runtime/google` is connector-only. Keep this directory private. The coding image downloads gh v2.104.0 and verifies the architecture-specific official checksum at build time.
+```mermaid
+flowchart LR
+    LifeChat["Private Telegram chat"] --- Life["Life assistant"]
+    Life --> Broker["Restricted Google connector"]
+    Broker --> Google["Gmail and selected Sheets"]
+    CodingChat["Private Telegram chat"] --- Coding["Coding assistant"]
+    Coding --> GitHub["Authorized GitHub repositories"]
+```
 
-Select an actual model available to the account for each role: `./hermesctl model life MODEL_ID` and `./hermesctl model coding MODEL_ID`. Determine availability in your own account; no model is presumed. With the corresponding service stopped, authenticate separately using `./hermesctl login life` and `./hermesctl login coding`, following each device-code prompt. Do not paste credentials into chat. First run may need to build the coding image (`docker-compose build coding` or `docker compose build coding`).
+## Get started
 
-## Telegram
+- **Fresh local installation:** Follow the [Docker Compose setup](docs/LOCAL-SETUP.md) to initialize both roles, configure your own bots and verify access before enabling schedules.
+- **Hosted installation:** Use the [Railway guide](deploy/railway/README.md) for service configuration, persistent volumes, migration and recovery.
+- **Working on the repository:** See the [contributor guide](CONTRIBUTING.md) for the file layout, offline checks and review process.
 
-In Telegram, open the verified **@BotFather**, use `/newbot`, follow its prompts, and repeat `/newbot` to create a second distinct bot. Store each token privately. Start each bot in a private Telegram chat. With the corresponding service stopped, run `./hermesctl telegram-ids life` or `./hermesctl telegram-ids coding` and enter that bot's token at the hidden prompt. The helper calls Telegram's official getUpdates API and prints only numeric user and private-chat IDs, not tokens or message contents. It may show multiple candidates: verify which IDs are yours and choose explicitly; never authorize an unknown sender. If no candidate appears, send /start to that bot and retry. Each bot's gateway must remain stopped during lookup because only one client may poll its updates. Do not paste a token into chat. Enter each token at the hidden prompt with `./hermesctl telegram life` and `./hermesctl telegram coding`, followed by numeric allowed user IDs and the intended home chat ID. Do not use a group as the home channel. The gateway is configured to disallow all-user access. Restart after changes.
+> [!WARNING]
+> Do not start local gateways or run local `chat` or `login` commands while a hosted installation is using the same bot tokens or provider grants.
 
-Use `./hermesctl validate` to check activation inputs, then `./hermesctl up` to synchronize managed config, persona and skill files into the stopped native volumes and start both, `./hermesctl status`, `./hermesctl shell life` (or `coding`), and `./hermesctl down` to stop. Validation is local and credential-free; it does not prove login or bot delivery. The `up` command requires the services to be stopped before it synchronizes; use `./hermesctl down` first when applying changes. `./hermesctl sync life` or `sync coding` synchronizes a single stopped role without overwriting its OAuth or session state. The user must verify both private bot conversations and allowlist behavior before relying on them. `up` requires both roles configured; OAuth and Google setup are independent of one another.
+## Repository layout
 
-## Coding
-
-With coding stopped, run `./hermesctl github-login` for a fresh interactive user GitHub login; no host credentials are mounted. Login includes `read:project` so GitHub Projects boards are available without a second permission setup. Configure verified personal identity with `./hermesctl git-identity 'Your Name' 'you@example.com'`. Work only in explicitly selected repositories and verify access and identity before use. User review is required before merge or deployment. The persona directs the agent not to use bot authors or trailers; Git identity settings and this instruction are not a tamper-proof enforcement boundary. No coding cron jobs are installed.
-
-## Google and scheduled work
-
-1. Create or select a Google Cloud project. Enable **Gmail API** and **Google Sheets API**. Configure the OAuth consent screen; while publishing status is Testing, add each Google account as a test user. A work account may require administrator approval. Google may expire Testing refresh grants after seven days; reauthorize when needed.
-2. Create an OAuth client of type **Desktop app**, download its JSON, and place it privately at `.runtime/google/client.json` (for example, `install -m 600 /path/to/downloaded-client.json .runtime/google/client.json`). Do not paste it or a token into chat. The connector alone can read this file. Gmail modify permission is broader than our allowed actions; the connector enforces the narrower API and its credentials must stay private.
-3. Build/start the connector: `docker-compose --env-file /dev/null -f compose.yaml up -d --build --no-deps google-connectors`. If using the Compose plugin replace `docker-compose` with `docker compose`. Authorize each account separately with `docker-compose --env-file /dev/null -f compose.yaml run --rm --service-ports google-auth authorize personal` (choose a distinct path-safe name for each). Open the printed Google URL on this computer, sign in and approve; the callback binds only to 127.0.0.1:8765. The verified account's monitoring cutoff is saved at first authorization. Reauthorization requires `authorize NAME --replace`; the same account keeps its cutoff and a different account receives a new cutoff. Grants and configuration remain in ignored `.runtime/google`.
-4. For each selected sheet, use `docker-compose --env-file /dev/null -f compose.yaml run --rm google-auth sheet-add ALIAS SPREADSHEET_ID ACCOUNT`. Choose the authorized account that can access that sheet. IDs stay in the private runtime file. Optionally, only when explicitly desired, `run --rm google-auth history ACCOUNT DAYS` extends that account's history window by 1–30 days. This is an operator action, never available through the agent API.
-5. Configure life Telegram as described above, then recreate only the connector to apply changed bot settings: `docker-compose --env-file /dev/null -f compose.yaml up -d --force-recreate --no-deps google-connectors`. Connector health distinguishes missing accounts, sheets and Telegram configuration from ready; readiness is local configuration, not proof of successful Google access or Telegram delivery. Test with authorized accounts and the intended private chat before resuming scheduled work.
-
-The connector supports new-mail listing and reading, add-only Hermes custom labels, draft creation for review, and allowlisted sheet metadata, bounded sheet reads and RAW writes. The life skill discovers tabs and bounded headers before reading, and respects tabs marked NO AUTOMATIONS. It exposes no send, archive, delete, mark-read or generic proxy route. Sheet writes compare expected values and protect formulas, but Google does not provide an atomic compare-and-set across concurrent editors. A durable event records before/after and an outbox retries notices; interruption after remote success may produce a duplicate Telegram notification, and ambiguous writes are reconciled rather than replayed. Review unresolved uncertainty before relying on an update.
-
-Run offline checks with `cd google && npm ci && npm run check && npm test`. `google/test/fixture-server.mjs` is an explicitly invoked test-only server with fixed synthetic data and no external transport; it is never selected by a production environment setting.
-
-Once model, login and Telegram are configured, `./hermesctl cron-install` installs two native jobs with stable names, paused by default: every 30 minutes and 09:00 Europe/Belgrade. Existing jobs are left unchanged. Review them in Hermes before manually resuming, and resume only after Google authorization and notification delivery have been verified. Model or schedule changes do not rewrite existing jobs. A running gateway can maintain cron without messaging being connected, but delivery requires Telegram.
-
-## Railway deployment and recovery
-
-Railway uses separate `hermes-life` and `hermes-coding` projects. Life and coding each mount `/opt/data`; the Google connector mounts `/data` in the life project. Bot credentials and the connector key are Railway variables; mutable OAuth/GitHub grants, sessions and memories remain on their respective private volumes. There are no public service domains. The configured source is GitHub branch `work/hermes`. Use explicit source deployment in Railway; automatic rollout on push has not been verified. Watch patterns select runtime files and exclude documentation.
-
-The completed cutover stopped all local writers, exported private archives, verified remote destinations were empty, checked transfer checksums, and restored state with UID/GID 1000. Both remote gateways and real connections were verified. Local archives remain private under `.runtime/migration`; no credentials or tracker IDs are in the public repository. Disaster recovery has not been tested. For rollback, stop remote writers first and obtain a fresh snapshot or reauthorize: provider refreshes can make the old local login state stale. Never restore over existing credentials or run both installations concurrently.
-
-The activation policy deliberately accepts only the provided canonical configuration, a selected model, Hermes's version marker, and optional medium reasoning. Other config edits require updating and reviewing the validator as well. An interrupted installer normally releases its cron lock; if forcibly killed, confirm no installer is running before removing the reported stale lock directory.
+| Location | Contents |
+| --- | --- |
+| [`hermesctl`](hermesctl), [`compose.yaml`](compose.yaml) | Local setup and service management |
+| [`config/`](config/), [`skills/`](skills/) | Role configuration, instructions and skills |
+| [`google/`](google/), [`plugins/restricted-google/`](plugins/restricted-google/) | Restricted Google connector and Hermes tool integration |
+| [`deploy/railway/`](deploy/railway/) | Railway images and deployment guide |
+| [`docs/`](docs/) | [Local setup](docs/LOCAL-SETUP.md), [use](docs/USE.md), [validation](docs/VALIDATION.md) and [privacy](docs/PRIVACY.md) |
